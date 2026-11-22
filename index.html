@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Zigma Client & Download</title>
+    <!-- Tailwind CSS & Google Font Inter / JetBrains Mono -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            border-radius: 0px !important;
+            font-weight: 400 !important;
+            text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.85);
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #000000;
+            color: #e4e2ea;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        ::selection { background: #ffffff; color: #14101c; }
+
+        /* Scrollbar */
+        .panel-scroll::-webkit-scrollbar {
+            width: 3px;
+        }
+        .panel-scroll::-webkit-scrollbar-track {
+            background: rgba(18, 16, 22, 0.6);
+        }
+        .panel-scroll::-webkit-scrollbar-thumb {
+            background: #6b538a;
+        }
+
+        /* ClickGUI Panels */
+        .zigma-panel {
+            position: absolute;
+            width: 172px;
+            background: rgba(24, 22, 30, 0.88);
+            border: 1px solid rgba(123, 98, 156, 0.45);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+        }
+
+        .zigma-panel.dragging {
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.9), 0 0 0 1px #8c70b0;
+            border-color: #9376b8;
+            z-index: 9999 !important;
+        }
+
+        .zigma-header {
+            background: linear-gradient(180deg, #7e659f 0%, #6a5289 100%);
+            color: #ffffff;
+            font-size: 12.5px;
+            letter-spacing: 0.01em;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: grab;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .zigma-header:active {
+            cursor: grabbing;
+        }
+
+        .module-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 3px 8px;
+            font-size: 11.5px;
+            line-height: 1.35;
+            color: #d6d3de;
+            background: rgba(28, 26, 35, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.035);
+            cursor: pointer;
+            transition: background-color 0.1s ease, color 0.1s ease;
+        }
+
+        .module-row:hover {
+            background: rgba(54, 48, 68, 0.9);
+            color: #ffffff;
+        }
+
+        .module-row.active {
+            background: linear-gradient(90deg, rgba(105, 82, 136, 0.78) 0%, rgba(86, 66, 114, 0.72) 100%);
+            color: #ffffff;
+        }
+
+        .module-row.active:hover {
+            background: linear-gradient(90deg, rgba(119, 94, 152, 0.88) 0%, rgba(98, 76, 129, 0.82) 100%);
+        }
+
+        .expand-btn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #c9c3d6;
+            padding: 0 3px;
+            line-height: 1;
+        }
+
+        .expand-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .sub-settings-box {
+            background: rgba(19, 17, 24, 0.94);
+            border-bottom: 1px solid rgba(123, 98, 156, 0.35);
+        }
+
+        .sub-mode-row {
+            padding: 2.5px 10px;
+            font-size: 11px;
+            color: #b8b3c4;
+            background: rgba(34, 31, 43, 0.85);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.1s ease, color 0.1s ease;
+        }
+
+        .sub-mode-row:hover {
+            background: rgba(65, 56, 84, 0.85);
+            color: #ffffff;
+        }
+
+        .sub-mode-row.selected {
+            background: rgba(94, 74, 122, 0.72);
+            color: #ffffff;
+        }
+
+        .sub-prop-row {
+            padding: 3px 10px;
+            font-size: 11px;
+            color: #cfcadd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.025);
+        }
+
+        .color-swatch {
+            width: 11px;
+            height: 11px;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        /* Documentation 1-for-1 Styling */
+        :root {
+            --bg: #0b0a0d;
+            --panel: #151317;
+            --line: #2c2833;
+            --text: #f0ecf5;
+            --muted: #9a93a8;
+            --accent: #ffffff;
+            --accent-hover: #e6e6e6;
+        }
+
+        .docs-wrap {
+            width: 100%;
+            max-width: 1080px;
+            margin: 0 auto;
+        }
+
+        .docs-layout {
+            display: grid;
+            grid-template-columns: 250px minmax(0, 1fr);
+            gap: 44px;
+            align-items: start;
+        }
+
+        .docs-side {
+            position: sticky;
+            top: 24px;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+            padding-right: 6px;
+            font-size: 14px;
+        }
+
+        .docs-search {
+            width: 100%;
+            padding: 9px 12px;
+            margin-bottom: 8px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+        }
+        .docs-search::placeholder { color: var(--muted); }
+
+        .docs-side-title {
+            display: block;
+            margin: 18px 0 6px;
+            font-size: 11px;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .docs-side ul { list-style: none; margin: 0; padding: 0; }
+
+        .docs-side a.nav {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 5px 10px;
+            border-left: 2px solid transparent;
+            color: var(--muted);
+        }
+        .docs-side a.nav:hover { color: var(--text); }
+        .docs-side a.nav.active {
+            color: var(--text);
+            border-left-color: var(--accent);
+            background: var(--panel);
+        }
+
+        .docs-crumbs {
+            margin: 0 0 14px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .docs-crumbs a { color: var(--muted); }
+        .docs-crumbs a:hover { color: var(--accent); }
+
+        .docs-content h1 {
+            font-size: 34px;
+            line-height: 1.2;
+            margin: 0 0 10px;
+            letter-spacing: -.5px;
+        }
+        .docs-content .lead { color: var(--muted); margin: 0 0 26px; max-width: 720px; }
+        .docs-content section {
+            border-top: 1px solid var(--line);
+            padding: 24px 0 4px;
+        }
+        .docs-content h2 {
+            font-size: 15px;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            color: var(--accent);
+            margin: 0 0 14px;
+        }
+        .docs-content p { margin: 0 0 12px; }
+        .docs-content code {
+            font-family: "Cascadia Code", Consolas, monospace;
+            font-size: 13px;
+            background: #100e13;
+            border: 1px solid var(--line);
+            padding: 1px 6px;
+            color: var(--text);
+        }
+        .docs-content .note {
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--accent);
+            background: var(--panel);
+            padding: 12px 14px;
+            margin: 14px 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        ul.plain, ol.plain { margin: 8px 0 16px; padding-left: 20px; }
+        ul.plain li, ol.plain li { margin: 4px 0; }
+        dl.index { margin: 4px 0 8px; }
+        dl.index dt { margin-top: 14px; }
+        dl.index dd { margin: 2px 0 0; color: var(--muted); }
+
+        .docs-footer {
+            border-top: 1px solid var(--line);
+            margin-top: 40px;
+            padding-top: 18px;
+            display: flex;
+            justify-content: space-between;
+            color: var(--muted);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen overflow-hidden bg-black">
+
+    <!-- Starfield Background -->
+    <canvas id="starfieldCanvas" class="fixed inset-0 block w-full h-full bg-black pointer-events-none"></canvas>
+
+    <!-- VIEW 1: ClickGUI & Home Page -->
+    <div id="homeView" class="relative w-full h-full overflow-auto">
+        <div class="w-full flex flex-col items-center pt-16 pb-12 z-20 relative">
+            <h1 class="text-white text-5xl font-mono tracking-wider mb-2">Zigma.</h1>
+            <p class="text-[#8c859b] text-xs font-mono mb-6">fabric client made for anarchy</p>
+
+            <!-- Working download button linked to zigma-1.1.70.jar -->
+            <a id="downloadJarBtn" href="zigma-1.1.70.jar" download class="bg-white text-black font-mono text-xs px-6 py-2.5 mb-6 border border-white/20 shadow-xl hover:bg-[#eae6f2] transition cursor-pointer flex items-center gap-2 no-underline">
+                <span>↓</span> download jar
+            </a>
+
+            <div class="text-[11px] text-[#8c859b] font-mono space-x-3 mb-4">
+                <span>1.21.4</span>
+                <span>·</span>
+                <span>fabric 1.21.4</span>
+                <span>·</span>
+                <span>hd capes</span>
+                <span>·</span>
+                <span>automations</span>
+                <span>·</span>
+                <span id="clickguiLabel" class="text-white cursor-pointer underline">clickgui</span>
+            </div>
+
+            <button id="openDocsBtn" class="text-[11px] text-[#8c859b] font-mono underline hover:text-white transition cursor-pointer bg-transparent border-none">
+                install guide →
+            </button>
+
+            <div class="flex items-center gap-2 mt-6 bg-[#16141c]/90 border border-[#7c639e]/40 p-2 shadow-2xl backdrop-blur">
+                <div class="flex items-center gap-2 text-[11px] text-[#b9b3c7] bg-[#1b1923] px-2.5 py-1 border border-white/5">
+                    <span>Active:</span>
+                    <span id="activeCounter" class="text-white font-mono">0</span>
+                </div>
+                <div class="relative">
+                    <input
+                        id="moduleSearchInput"
+                        type="text"
+                        placeholder="Search modules..."
+                        autocomplete="off"
+                        class="bg-[#15131b] text-[#e4e2ea] placeholder-[#79738a] text-[11.5px] px-2.5 py-1 border border-[#7c639e]/35 focus:outline-none focus:border-[#9b7ec2]"
+                    />
+                </div>
+                <button
+                    id="resetLayoutBtn"
+                    class="bg-[#24202e] hover:bg-[#352e45] text-[#d6d2e0] text-[11px] py-1 px-2.5 border border-white/10 transition cursor-pointer"
+                >
+                    Reset Layout
+                </button>
+            </div>
+        </div>
+
+        <div id="panelsContainer" class="relative w-full min-h-[1400px] min-w-[1300px] px-4 pb-48"></div>
+    </div>
+
+    <!-- VIEW 2: 1-for-1 Haz-style Documentation -->
+    <div id="docsView" class="hidden absolute inset-0 w-full h-full overflow-auto bg-[#0b0a0d] z-50 p-6 md:p-11">
+        <div class="docs-wrap">
+            <div class="flex items-center justify-between mb-8">
+                <button id="backToHomeBtn" class="text-[13px] text-[#9a93a8] hover:text-[#ffffff] cursor-pointer bg-transparent border-none">← Zigma</button>
+                <div class="text-[22px] font-bold tracking-tight">docs<span class="text-[#ffffff]">.</span></div>
+            </div>
+
+            <div class="docs-layout">
+                <aside class="docs-side">
+                    <input class="docs-search" type="search" placeholder="search modules" autocomplete="off">
+                    <span class="docs-side-title">docs</span>
+                    <ul>
+                        <li><a class="nav active" href="#/start">getting started</a></li>
+                    </ul>
+                    <span class="docs-side-title">modules</span>
+                    <ul>
+                        <li><a class="nav" href="#/modules">overview <span class="count">121</span></a></li>
+                        <li><a class="nav" href="#/modules/combat">combat <span class="count">25</span></a></li>
+                        <li><a class="nav" href="#/modules/render">render <span class="count">26</span></a></li>
+                        <li><a class="nav" href="#/modules/player">player <span class="count">24</span></a></li>
+                        <li><a class="nav" href="#/modules/movement">movement <span class="count">18</span></a></li>
+                        <li><a class="nav" href="#/modules/client">client <span class="count">10</span></a></li>
+                    </ul>
+                </aside>
+
+                <main class="docs-content">
+                    <p class="docs-crumbs">docs / getting started</p>
+                    <h1>getting started</h1>
+                    <p class="lead">what you need and how to get Zigma running.</p>
+                    
+                    <section>
+                        <h2>requirements</h2>
+                        <ul class="plain">
+                            <li>Minecraft <strong>1.21.4</strong></li>
+                            <li><a href="https://fabricmc.net/use/installer/" target="_blank" rel="noopener">Fabric Loader</a></li>
+                            <li><a href="https://modrinth.com/mod/fabric-api" target="_blank" rel="noopener">Fabric API</a></li>
+                            <li>Java 21</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2>installation</h2>
+                        <ol class="plain">
+                            <li>install <a href="https://fabricmc.net/use/installer/" target="_blank" rel="noopener">Fabric Loader</a> for 1.21.4</li>
+                            <li>grab the jar (`zigma-1.1.70.jar`) from the main page</li>
+                            <li>copy the jar to your <code>mods/</code> folder</li>
+                            <li>start the game</li>
+                        </ol>
+                        <div class="note">no setup needed, settings save themselves. the menu opens with RIGHT CONTROL, you can change the key in client / ClickGui / Keybind.</div>
+                    </section>
+                </main>
+            </div>
+
+            <footer class="docs-footer">
+                <span>Zigma · docs</span>
+                <span><a id="footerBackBtn" href="#" class="text-[#9a93a8] hover:text-white">back to zigma</a></span>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="fixed bottom-3 right-3 bg-[#1d1a26]/95 border border-[#7c639e]/60 text-[#ece9f2] text-[11.5px] px-3 py-1.5 shadow-lg opacity-0 pointer-events-none transition-opacity duration-200 z-[10000]"></div>
+
+    <script>
+        // Starfield background
+        (function initStarfield() {
+            const canvas = document.getElementById('starfieldCanvas');
+            const ctx = canvas.getContext('2d');
+            let width = 0, height = 0, dpr = 1, stars = [];
+
+            function resizeCanvas() {
+                dpr = Math.min(window.devicePixelRatio || 1, 2);
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = Math.floor(width * dpr);
+                canvas.height = Math.floor(height * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                stars = [];
+                for (let i = 0; i < 300; i++) {
+                    stars.push({
+                        x: Math.random() * width,
+                        y: Math.random() * height,
+                        radius: 0.6 + Math.random() * 0.8,
+                        alpha: 0.25 + Math.random() * 0.4
+                    });
+                }
+            }
+
+            function draw() {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, width, height);
+                for (let s of stars) {
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+                    ctx.fill();
+                }
+                requestAnimationFrame(draw);
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            draw();
+        })();
+
+        // ClickGUI & Navigation
+        (function initApp() {
+            const panelsContainer = document.getElementById('panelsContainer');
+            const activeCounterEl = document.getElementById('activeCounter');
+            const searchInput = document.getElementById('moduleSearchInput');
+            const resetLayoutBtn = document.getElementById('resetLayoutBtn');
+            const clickguiLabel = document.getElementById('clickguiLabel');
+            const openDocsBtn = document.getElementById('openDocsBtn');
+            const backToHomeBtn = document.getElementById('backToHomeBtn');
+            const footerBackBtn = document.getElementById('footerBackBtn');
+            const homeView = document.getElementById('homeView');
+            const docsView = document.getElementById('docsView');
+            const toastEl = document.getElementById('toastNotification');
+
+            let topZIndex = 100;
+            let toastTimeout = null;
+
+            function showToast(msg) {
+                toastEl.textContent = msg;
+                toastEl.style.opacity = '1';
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(() => { toastEl.style.opacity = '0'; }, 1800);
+            }
+
+            function createDefaultSettings() {
+                return {
+                    modes: ['Aero', 'Line', 'Gradient', 'Gear'],
+                    selectedMode: 'Aero',
+                    colors: [
+                        { label: 'TextColor', value: '#ffffff' },
+                        { label: 'TextEnabled', value: '#ffffff' },
+                        { label: 'Color', value: '#6f5691' },
+                        { label: 'Background', value: '#1b1922' },
+                        { label: 'Button', value: '#654e85' }
+                    ],
+                    enabledProp: false
+                };
+            }
+
+            const CATEGORIES_DATA = [
+                {
+                    id: 'combat', title: 'Combat', collapsed: false,
+                    modules: [
+                        { name: 'AnchorAura', active: false }, { name: 'AntiBot', active: false },
+                        { name: 'AntiPearl', active: false }, { name: 'AntiPhase', active: false },
+                        { name: 'Arrows', active: true }, { name: 'Aura', active: true },
+                        { name: 'AutoArmor', active: false }, { name: 'AutoBowRelease', active: false },
+                        { name: 'AutoClicker', active: false }, { name: 'AutoCrystal', active: false },
+                        { name: 'AutoDrop', active: false }, { name: 'AutoExp', active: false },
+                        { name: 'AutoLog', active: false }, { name: 'AutoMace', active: false },
+                        { name: 'AutoMine', active: false }, { name: 'AutoPot', active: false },
+                        { name: 'AutoTrap', active: false }, { name: 'BedAura', active: false },
+                        { name: 'Blocker', active: false }, { name: 'BowAim', active: false },
+                        { name: 'Criticals', active: false }, { name: 'FeetPlace', active: false },
+                        { name: 'FishTrap', active: false }, { name: 'HoleFill', active: false },
+                        { name: 'KeyPearl', active: false }, { name: 'Mainhand', active: false },
+                        { name: 'NoHitDelay', active: false }, { name: 'Offhand', active: true },
+                        { name: 'Pusher', active: false }, { name: 'SelfFill', active: false },
+                        { name: 'SelfTrap', active: false }
+                    ]
+                },
+                {
+                    id: 'misc', title: 'Misc', collapsed: false,
+                    modules: [
+                        { name: 'Announcer', active: false }, { name: 'AntiAFK', active: false },
+                        { name: 'AntiAim', active: false }, { name: 'AntiCyrillic', active: false },
+                        { name: 'AntiQuit', active: false }, { name: 'AntiSpam', active: false },
+                        { name: 'AutoReconnect', active: false }, { name: 'AutoRespawn', active: false },
+                        { name: 'AutoSign', active: false }, { name: 'BetterChat', active: true },
+                        { name: 'ChatFilter', active: false }, { name: 'ChestSearchBar', active: false },
+                        { name: 'CoordLogger', active: false }, { name: 'CustomDeathText', active: false },
+                        { name: 'DiscordNotifs', active: false }, { name: 'ExtraScreenshot', active: false },
+                        { name: 'ExtraTab', active: true }, { name: 'Heaven', active: false },
+                        { name: 'KillEffects', active: false }, { name: 'MiddleClick', active: true },
+                        { name: 'NoNarrator', active: false }, { name: 'NoPacketKick', active: false },
+                        { name: 'NoRotate', active: true }, { name: 'SkinFlicker', active: false },
+                        { name: 'SoundBlocker', active: false }, { name: 'Spammer', active: false },
+                        { name: 'StashFinder', active: false }, { name: 'Swing', active: false },
+                        { name: 'VisualRange', active: false }
+                    ]
+                },
+                {
+                    id: 'render', title: 'Render', collapsed: false,
+                    modules: [
+                        { name: 'Ambience', active: false }, { name: 'Animations', active: false },
+                        { name: 'Blur', active: true }, { name: 'Borders', active: false },
+                        { name: 'BreakHighlight', active: false }, { name: 'Chams', active: false },
+                        { name: 'Crosshair', active: false }, { name: 'ESP', active: false },
+                        { name: 'FreeLook', active: false }, { name: 'Glint', active: false },
+                        { name: 'Highlight', active: true }, { name: 'Hitmarker', active: false },
+                        { name: 'HoleESP', active: false }, { name: 'LogoutSpots', active: false },
+                        { name: 'NameTags', active: true }, { name: 'NoBob', active: false },
+                        { name: 'NoRender', active: false }, { name: 'Particles', active: false },
+                        { name: 'PhaseESP', active: false }, { name: 'Search', active: false },
+                        { name: 'Shader', active: false }, { name: 'Skeleton', active: false },
+                        { name: 'Skybox', active: false }, { name: 'Tooltips', active: true },
+                        { name: 'Tracers', active: false }, { name: 'Trails', active: false },
+                        { name: 'Trajectories', active: false }, { name: 'Tunnels', active: false },
+                        { name: 'ViewClip', active: false }, { name: 'ViewModel', active: false },
+                        { name: 'VoidESP', active: false }
+                    ]
+                },
+                {
+                    id: 'movement', title: 'Movement', collapsed: false,
+                    modules: [
+                        { name: 'AntiVoid', active: false }, { name: 'AutoWalk', active: false },
+                        { name: 'ElytraFly', active: false }, { name: 'EntityControl', active: false },
+                        { name: 'FakeLag', active: false }, { name: 'FastClimb', active: false },
+                        { name: 'FastFall', active: false }, { name: 'FastStairs', active: false },
+                        { name: 'FastSwim', active: false }, { name: 'FastWeb', active: false },
+                        { name: 'Fireworks', active: false }, { name: 'Flight', active: false },
+                        { name: 'HighJump', active: false }, { name: 'HoleSnap', active: false },
+                        { name: 'Jesus', active: false }, { name: 'LongJump', active: false },
+                        { name: 'NoFall', active: false }, { name: 'NoJumpDelay', active: false },
+                        { name: 'NoSlow', active: true }, { name: 'ObstaclePasser', active: false },
+                        { name: 'SafeWalk', active: false }, { name: 'Speed', active: false },
+                        { name: 'Sprint', active: true }, { name: 'Step', active: false },
+                        { name: 'Velocity', active: true }, { name: 'Warp', active: false }
+                    ]
+                },
+                {
+                    id: 'player', title: 'Player', collapsed: false,
+                    modules: [
+                        { name: 'AutoBreed', active: false }, { name: 'AutoCraft', active: false },
+                        { name: 'AutoEat', active: false }, { name: 'AutoFarm', active: false },
+                        { name: 'AutoFish', active: false }, { name: 'AutoMount', active: false },
+                        { name: 'AutoNameTag', active: false }, { name: 'AutoTame', active: false },
+                        { name: 'AutoTool', active: false }, { name: 'AutoTrade', active: false },
+                        { name: 'AutoUpgrade', active: false }, { name: 'ChestStealer', active: false },
+                        { name: 'FastPlace', active: true }, { name: 'Freecam', active: false },
+                        { name: 'InventoryCleaner', active: false }, { name: 'InventorySorter', active: false },
+                        { name: 'InventoryTweaks', active: false }, { name: 'ItemSaver', active: false },
+                        { name: 'NameProtect', active: false }, { name: 'NoEffects', active: false },
+                        { name: 'NoGlitchBlocks', active: false }, { name: 'NoInteract', active: false },
+                        { name: 'Nuker', active: false }, { name: 'Replenish', active: false },
+                        { name: 'RotationLock', active: false }, { name: 'Scaffold', active: false },
+                        { name: 'SourceFill', active: false }, { name: 'SpeedMine', active: true }
+                    ]
+                },
+                {
+                    id: 'exploit', title: 'Exploit', collapsed: false,
+                    modules: [
+                        { name: 'AntiHunger', active: false }, { name: 'AntiVanish', active: false },
+                        { name: 'ChorusControl', active: false }, { name: 'FakeVanilla', active: false },
+                        { name: 'FastLatency', active: true }, { name: 'HitboxDesync', active: false },
+                        { name: 'IllegalDisconnect', active: false }, { name: 'MultiTask', active: true },
+                        { name: 'NewChunks', active: false }, { name: 'NoMineAnimation', active: false },
+                        { name: 'Phase', active: false }, { name: 'PingSpoof', active: false },
+                        { name: 'PortalGodMode', active: false }, { name: 'RaytraceBypass', active: false },
+                        { name: 'Reach', active: false }, { name: 'RocketExtender', active: false },
+                        { name: 'Timer', active: false }, { name: 'Trident', active: false },
+                        { name: 'XCarry', active: false }
+                    ]
+                },
+                {
+                    id: 'client', title: 'Client', collapsed: false,
+                    modules: [
+                        { name: 'AntiCheat', active: false }, { name: 'Baritone', active: false },
+                        { name: 'Colors', active: false }, { name: 'Discord', active: false },
+                        { name: 'Fonts', active: false }, { name: 'HUD', active: true },
+                        { name: 'IRC', active: true }, { name: 'Notifications', active: false },
+                        { name: 'Settings', active: false }, { name: 'UI', active: true, expanded: true }
+                    ]
+                }
+            ];
+
+            CATEGORIES_DATA.forEach(cat => {
+                cat.modules.forEach(mod => {
+                    mod.expanded = Boolean(mod.expanded);
+                    mod.settings = createDefaultSettings();
+                });
+            });
+
+            const COLOR_CYCLE = ['#ffffff', '#6f5691', '#1b1922', '#9d7ec7', '#4a3a63', '#c8b8e0'];
+
+            function updateActiveCounter() {
+                let count = 0;
+                CATEGORIES_DATA.forEach(cat => {
+                    cat.modules.forEach(m => { if (m.active) count++; });
+                });
+                activeCounterEl.textContent = count;
+            }
+
+            function makeDraggable(panelEl, handleEl) {
+                let isDragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
+
+                function onPointerDown(e) {
+                    if (e.target.closest('button')) return;
+                    isDragging = true;
+                    panelEl.classList.add('dragging');
+                    panelEl.style.zIndex = ++topZIndex;
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    startX = clientX; startY = clientY;
+                    origLeft = parseFloat(panelEl.style.left) || 0;
+                    origTop = parseFloat(panelEl.style.top) || 0;
+                    document.addEventListener('mousemove', onPointerMove);
+                    document.addEventListener('mouseup', onPointerUp);
+                    document.addEventListener('touchmove', onPointerMove, { passive: false });
+                    document.addEventListener('touchend', onPointerUp);
+                }
+
+                function onPointerMove(e) {
+                    if (!isDragging) return;
+                    if (e.cancelable) e.preventDefault();
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    panelEl.style.left = `${Math.max(0, origLeft + (clientX - startX))}px`;
+                    panelEl.style.top = `${Math.max(0, origTop + (clientY - startY))}px`;
+                }
+
+                function onPointerUp() {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    panelEl.classList.remove('dragging');
+                    document.removeEventListener('mousemove', onPointerMove);
+                    document.removeEventListener('mouseup', onPointerUp);
+                    document.removeEventListener('touchmove', onPointerMove);
+                    document.removeEventListener('touchend', onPointerUp);
+                }
+
+                handleEl.addEventListener('mousedown', onPointerDown);
+                handleEl.addEventListener('touchstart', onPointerDown, { passive: true });
+            }
+
+            function getInitialPanelPositions() {
+                const panelWidth = 172;
+                const gap = 12;
+                const totalWidth = CATEGORIES_DATA.length * (panelWidth + gap) - gap;
+                const startX = Math.max(20, (window.innerWidth - totalWidth) / 2);
+                const startY = 16; // Restored back to the original top height (16px)
+                return CATEGORIES_DATA.map((_, idx) => ({
+                    left: startX + idx * (panelWidth + gap),
+                    top: startY
+                }));
+            }
+
+            let panelPositions = getInitialPanelPositions();
+
+            function renderPanels() {
+                const filterQuery = searchInput.value.trim().toLowerCase();
+                panelsContainer.innerHTML = '';
+
+                CATEGORIES_DATA.forEach((category, catIndex) => {
+                    const filteredModules = category.modules.filter(m => m.name.toLowerCase().includes(filterQuery));
+                    if (filterQuery && filteredModules.length === 0) return;
+
+                    const panel = document.createElement('div');
+                    panel.className = 'zigma-panel';
+                    panel.style.left = `${panelPositions[catIndex].left}px`;
+                    panel.style.top = `${panelPositions[catIndex].top}px`;
+                    panel.style.zIndex = 20 + catIndex;
+
+                    panel.addEventListener('mousedown', () => { panel.style.zIndex = ++topZIndex; });
+
+                    const header = document.createElement('div');
+                    header.className = 'zigma-header';
+                    header.innerHTML = `<span>${category.title}</span><span class="text-[10px] opacity-80 font-mono">${category.collapsed ? '+' : ''}</span>`;
+
+                    header.addEventListener('dblclick', () => { category.collapsed = !category.collapsed; renderPanels(); });
+                    header.addEventListener('contextmenu', (e) => { e.preventDefault(); category.collapsed = !category.collapsed; renderPanels(); });
+
+                    panel.appendChild(header);
+
+                    if (!category.collapsed) {
+                        const listWrapper = document.createElement('div');
+                        listWrapper.className = 'panel-scroll max-h-[75vh] overflow-y-auto';
+
+                        filteredModules.forEach(mod => {
+                            const row = document.createElement('div');
+                            row.className = `module-row ${mod.active ? 'active' : ''}`;
+
+                            const nameSpan = document.createElement('span');
+                            nameSpan.textContent = mod.name;
+
+                            const expandBtn = document.createElement('span');
+                            expandBtn.className = 'expand-btn';
+                            expandBtn.textContent = mod.expanded ? '-' : '+';
+
+                            expandBtn.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                mod.expanded = !mod.expanded;
+                                renderPanels();
+                            });
+
+                            row.addEventListener('click', () => {
+                                mod.active = !mod.active;
+                                updateActiveCounter();
+                                renderPanels();
+                                showToast(`${mod.name}: ${mod.active ? 'Enabled' : 'Disabled'}`);
+                            });
+
+                            row.addEventListener('contextmenu', (e) => {
+                                e.preventDefault();
+                                mod.expanded = !mod.expanded;
+                                renderPanels();
+                            });
+
+                            row.appendChild(nameSpan);
+                            row.appendChild(expandBtn);
+                            listWrapper.appendChild(row);
+
+                            if (mod.expanded) {
+                                const subBox = document.createElement('div');
+                                subBox.className = 'sub-settings-box';
+
+                                mod.settings.modes.forEach(modeName => {
+                                    const modeRow = document.createElement('div');
+                                    const isSelected = mod.settings.selectedMode === modeName;
+                                    modeRow.className = `sub-mode-row ${isSelected ? 'selected' : ''}`;
+                                    modeRow.innerHTML = `<span>${modeName}</span>`;
+                                    modeRow.addEventListener('click', (e) => {
+                                        e.stopPropagation();
+                                        mod.settings.selectedMode = modeName;
+                                        renderPanels();
+                                    });
+                                    subBox.appendChild(modeRow);
+                                });
+
+                                mod.settings.colors.forEach(colorItem => {
+                                    const propRow = document.createElement('div');
+                                    propRow.className = 'sub-prop-row';
+                                    const label = document.createElement('span');
+                                    label.textContent = colorItem.label;
+
+                                    const swatch = document.createElement('button');
+                                    swatch.type = 'button';
+                                positionSelector: swatch.className = 'color-swatch';
+                                    swatch.style.backgroundColor = colorItem.value;
+
+                                    swatch.addEventListener('click', (e) => {
+                                        e.stopPropagation();
+                                        const nextIdx = (COLOR_CYCLE.indexOf(colorItem.value) + 1) % COLOR_CYCLE.length;
+                                        colorItem.value = COLOR_CYCLE[nextIdx];
+                                        renderPanels();
+                                    });
+
+                                    propRow.appendChild(label);
+                                    propRow.appendChild(swatch);
+                                    subBox.appendChild(propRow);
+                                });
+
+                                const enabledRow = document.createElement('div');
+                                enabledRow.className = 'sub-prop-row cursor-pointer hover:bg-white/5';
+                                const enabledLabel = document.createElement('span');
+                                enabledLabel.textContent = 'Enabled';
+
+                                const checkBox = document.createElement('span');
+                                checkBox.className = 'color-swatch flex items-center justify-center text-[9px] text-white';
+                                checkBox.style.backgroundColor = mod.settings.enabledProp ? '#6f5691' : '#1b1922';
+                                checkBox.textContent = mod.settings.enabledProp ? '✓' : '';
+
+                                enabledRow.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    mod.settings.enabledProp = !mod.settings.enabledProp;
+                                    renderPanels();
+                                });
+
+                                enabledRow.appendChild(enabledLabel);
+                                enabledRow.appendChild(checkBox);
+                                subBox.appendChild(enabledRow);
+
+                                listWrapper.appendChild(subBox);
+                            }
+                        });
+
+                        panel.appendChild(listWrapper);
+                    }
+
+                    const origMouseUp = () => {
+                        panelPositions[catIndex] = {
+                            left: parseFloat(panel.style.left) || panelPositions[catIndex].left,
+                            top: parseFloat(panel.style.top) || panelPositions[catIndex].top
+                        };
+                    };
+                    panel.addEventListener('mouseup', origMouseUp);
+                    panel.addEventListener('touchend', origMouseUp);
+
+                    makeDraggable(panel, header);
+                    panelsContainer.appendChild(panel);
+                });
+            }
+
+            searchInput.addEventListener('input', renderPanels);
+            resetLayoutBtn.addEventListener('click', () => {
+                panelPositions = getInitialPanelPositions();
+                renderPanels();
+                showToast('Layout reset');
+            });
+
+            clickguiLabel.addEventListener('click', () => {
+                panelsVisible = true;
+                panelsContainer.style.display = 'block';
+                panelsContainer.scrollIntoView({ behavior: 'smooth' });
+            });
+
+            // View switching
+            openDocsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                homeView.classList.add('hidden');
+                docsView.classList.remove('hidden');
+            });
+
+            backToHomeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                docsView.classList.add('hidden');
+                homeView.classList.remove('hidden');
+            });
+
+            footerBackBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                docsView.classList.add('hidden');
+                homeView.classList.remove('hidden');
+            });
+
+            window.addEventListener('resize', () => {
+                panelPositions = getInitialPanelPositions();
+                renderPanels();
+            });
+
+            updateActiveCounter();
+            renderPanels();
+        })();
+    </script>
+</body>
+</html>
